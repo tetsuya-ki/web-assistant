@@ -1,5 +1,6 @@
+<!-- 元ネタ: https://www.twilio.com/blog/speech-recognition-browser-web-speech-api-jp -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja-jp">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,29 +13,118 @@
       <h1>Browser speech recognition</h1>
     </header>
     <main>
-      <button id="button">Start listening</button>
       <div id="result"></div>
       <p id="message" hidden aria-hidden="true">
-        Your browser doesn't support Speech Recognition. Sorry.
+        あなたのブラウザは"Speech Recognition"がサポートされていません。
+        そのため、この機能は使用することができません。
+        Chromeではおそらく使えますので、そちらでお試しください。
       </p>
+      <p id="recog-status">(音声認識中)</p>
+      <button id="button">Start listening</button>
+      <button id="post_button">現在、Discordに投稿されます</button>
+      <div id="other">
+        <span>
+          <div class="setting-area">
+            <select class="classic" id="langKbn">
+              <option value="ja-jp">日本語(Japanese)</option>
+              <option value="en-us">英語(English)</option>
+            </select>
+            <span class="switchArea" id="switch" title="音声認識継続ON/OFF">
+              音声継続<input type="checkbox" id="switch2" value="1" />
+              <label for="switch2"><span></span></label>
+              <div id="swImg"></div>
+            </span>
+            <span class="switchArea" id="switch" title="編集可能ON/OFF">
+              結果編集<input type="checkbox" id="switch1" value="1" />
+              <label for="switch1"><span></span></label>
+              <div id="swImg"></div>
+            </span>
+          </div>
+        </span>
+        <div class="stuff">
+          <span class="textBox">
+            <input
+              id="name"
+              class="text"
+              type="textbox"
+              placeholder="名前"
+              onkeyup="this.setAttribute('value', this.value);"
+              value=""
+            />
+            <label class="label">名前</label>
+            <label class="error"></label>
+          </span>
+          <span class="textBox">
+            <input
+              id="webhook_url"
+              class="text"
+              type="password"
+              placeholder="Webhook URLを入力し有効にするとDiscordに投稿できるぞ！"
+              onkeyup="this.setAttribute('value', this.value);"
+              value=""
+            />
+            <label class="label">Webhook URL</label>
+            <label class="error"></label>
+          </span>
+        </div>
+        <!-- <span>名前: <input type="text" id="name" /></span>
+        <span>URL: <input type="password" id="webhook_url" size="29" maxlength="120"></span> -->
+      </div>
     </main>
     <footer>
       <p>Built with 🎙 by <a href="https://twitter.com/philnash">philnash</a></p>
+      <p>
+        上記のやつをちょっと改造した(<a
+          href="https://github.com/philnash/web-assistant/"
+          >元ネタ</a
+        >) by tetsuya-ki
+      </p>
+      <p>
+        &copy;2019 Phil Nsahのライセンスは<a
+          href="https://github.com/philnash/web-assistant/blob/master/LICENSE"
+          >MIT LICENSE</a
+        >
+      </p>
+      <p>&copy;2022 tetsuya-kiのライセンスはMIT LICENSE</p>
     </footer>
     <script>
+      let POST_FLAG = true;
+      // *************** この部分は人によって異なります！(かいし) ***************
+      POST_FLAG = false; // 投稿したくない場合(デバッグ等)はコメントアウトを解除
+      const BOT_NAME = "音声認識くん"; // 投稿するBotの名前を指定
+      const BOT_AVATAR_URL = "https://i.imgur.com/Wyw2lgj.png"; // あなたが使いたい画像を指定
+      // *************** この部分は人によって異なります！(終わり) ***************
       window.addEventListener("DOMContentLoaded", () => {
         const button = document.getElementById("button");
+        const discord_post_button = document.getElementById("post_button");
         const result = document.getElementById("result");
         const main = document.getElementsByTagName("main")[0];
+        const status = document.getElementById("recog-status");
+        const langKbn = document.getElementById("langKbn");
+        const name = document.getElementById("name");
+        const switch1 = document.getElementById("switch1");
+        const switch2 = document.getElementById("switch2");
+        const webhook_url = document.getElementById("webhook_url");
+        status.style.visibility = "hidden";
         let listening = false;
         const SpeechRecognition =
           window.SpeechRecognition || window.webkitSpeechRecognition;
         if (typeof SpeechRecognition !== "undefined") {
           const recognition = new SpeechRecognition();
+          // 音声として認識された音が検出された場合、音声認識中である旨表示
+          recognition.onspeechstart = () => {
+            status.style.visibility = "visible";
+          };
+
+          // 音声が止まった場合、認識中表示を消す
+          recognition.onsoundend = () => {
+            status.style.visibility = "hidden"; // 音声認識中である旨を消す
+          };
 
           const stop = () => {
             main.classList.remove("speaking");
             recognition.stop();
+            recognition.onend = () => {}; // 音声認識が止まった場合の処理継続も止める
             button.textContent = "Start listening";
           };
 
@@ -42,34 +132,144 @@
             main.classList.add("speaking");
             recognition.start();
             button.textContent = "Stop listening";
+            recognition.onend = () => {
+              // 音声認識が止まった場合の処理継続を開始
+              button.textContent = "Start listening";
+              main.classList.remove("speaking");
+              recognition.start();
+              main.classList.add("speaking");
+              button.textContent = "Stop listening";
+            };
           };
 
-          const onResult = event => {
-            result.innerHTML = "";
-            for (const res of event.results) {
-              const text = document.createTextNode(res[0].transcript);
-              const p = document.createElement("p");
-              if (res.isFinal) {
-                p.classList.add("final");
+          const post_start = () => {
+            discord_post_button.textContent = "Discord投稿中";
+            POST_FLAG = true;
+            discord_post_button.style.backgroundColor = "#f22f46";
+            discord_post_button.style.color = "#fff";
+          };
+          const post_stop = () => {
+            discord_post_button.textContent = "Discord投稿しない";
+            POST_FLAG = false;
+            discord_post_button.style.backgroundColor = null;
+            discord_post_button.style.color = "#f22f46";
+          };
+          !POST_FLAG ? post_stop() : post_start();
+          const onResult = (event) => {
+            // https://developer.mozilla.org/ja/docs/Web/API/SpeechRecognition を参考にした
+            // datelog(event);
+            for (i = 0; i < event.results.length; i++) {
+              let final_num = 0;
+              let text_list = [];
+              if (event.results[i].isFinal) {
+                text_list.push(event.results[i][0].transcript);
+                final_num++;
               }
-              p.appendChild(text);
-              result.appendChild(p);
+              // 全て音声認識が確定された場合、一旦処理を止める
+              if (final_num === event.results.length) {
+                // ややこしくなるため一旦処理を止めるが、また処理が起動する想定(recognition.onendイベントで動かすため)
+                status.style.visibility = "hidden"; // 音声認識中である旨を消す
+                recognition.stop();
+
+                // 名前の調整
+                let user_name = BOT_NAME;
+                let pname = "";
+                if (name.value !== "") {
+                  pname = "(" + name.value + ")";
+                  user_name += pname;
+                }
+
+                for (const text of text_list) {
+                  let name_and_text = text;
+                  name_and_text = pname + " " + text;
+                  const now = new Date();
+                  const now_datetime = now.toLocaleString();
+                  const now_and_text = now_datetime + ": " + name_and_text;
+
+                  // コンソールにログ出力し、画面に表示
+                  datelog(name_and_text);
+                  result.innerHTML += "<div>" + now_and_text + "</div>";
+
+                  // Webhookを使ってDiscordへポスト
+                  let requestPayload = {
+                    content: name_and_text, // 音声認識された文字列
+                    username: user_name, // 表示するユーザ名
+                    parse: "full", // URL展開するかどうかみたいなヤツだった気がする
+                  };
+                  // アバターの画像が定義されていれば使う
+                  if (typeof BOT_AVATAR_URL !== "undefined") {
+                    requestPayload.avatar_url = BOT_AVATAR_URL;
+                  }
+                  // POST_FLAGがOFFかつWebhookURLがない場合は何もしない
+                  if (POST_FLAG && webhook_url.value === "") {
+                    datelog("webhook_urlが登録されていません");
+                  } else if (text && text.length >= 5 && POST_FLAG) {
+                    postData(webhook_url.value, requestPayload).then((data) => {
+                      //datelog(data); // data.json() の呼び出しで解釈された JSON データ(デバッグ用)
+                    });
+                  }
+                }
+              }
             }
           };
-          recognition.continuous = true;
-          recognition.interimResults = true;
+          recognition.continuous = true; //音声認識を継続するか→Yes
+          //recognition.interimResults = true;//中間結果を表示するか→Yes
           recognition.addEventListener("result", onResult);
-          button.addEventListener("click", event => {
+          button.addEventListener("click", (event) => {
             listening ? stop() : start();
             listening = !listening;
           });
+          // Discord投稿状況ボタンのイベント追加
+          discord_post_button.addEventListener("click", (event) => {
+            POST_FLAG ? post_stop() : post_start();
+          });
+          // 言語設定リストのイベント追加
+          langKbn.addEventListener("change", (event) => {
+            recognition.lang = langKbn.value;
+          });
+          // 結果編集チェックボックスのイベント追加
+          switch1.addEventListener("change", (event) => {
+            switch1.checked
+              ? (result.contentEditable = true)
+              : (result.contentEditable = false);
+            datelog("result.contentEditable:" + result.contentEditable);
+          });
+          // 音声継続チェックボックスのイベント追加
+          switch2.addEventListener("change", (event) => {
+            switch2.checked
+              ? (recognition.continuous = true)
+              : (recognition.continuous = false);
+            datelog("recognition.continuous:" + recognition.continuous);
+          });
         } else {
+          // SpeechRecognitionが使えない場合は、ボタンなど使えないようにし、ダメですメッセージを表示する
           button.remove();
           const message = document.getElementById("message");
           message.removeAttribute("hidden");
           message.setAttribute("aria-hidden", "false");
         }
       });
+      async function postData(url = "", data = {}) {
+        // 既定のオプションには * が付いています
+        const response = await fetch(url, {
+          method: "POST", // *GET, POST, PUT, DELETE, etc.
+          mode: "cors", // no-cors, *cors, same-origin
+          cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
+          credentials: "same-origin", // include, *same-origin, omit
+          headers: {
+            "Content-Type": "application/json",
+          },
+          redirect: "follow", // manual, *follow, error
+          referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+          body: JSON.stringify(data), // 本文のデータ型は "Content-Type" ヘッダーと一致する必要があります
+        });
+        return response; // レスポンスを返却
+      }
+      function datelog(text="") {
+        const now = new Date();
+        const now_datetime = now.toLocaleString();
+        console.log(now_datetime + ": "+ text);
+      }
     </script>
   </body>
 </html>
