@@ -1,6 +1,10 @@
 # Web Assistant
 
 * Phil Nsah氏の"Speech to text in the browser"をもとに作成しました
+  * 試す: <https://tetsuya-ki.github.io/web-assistant/>
+    * 上記はGitHub Pagesで動いています
+    * ChromeかつPC(スマホ/タブレットはNG)かつインターネット接続ありでないと正常に動作しない可能性があります
+      * [Web Speech API](https://developer.mozilla.org/ja/docs/Web/API/Web_Speech_API)を使用しているため
 * 機能
   * Discordに投稿中/しないボタン
     * 「Discordに投稿中」と表示されている状態で、後述のWebhook URLが入力されていれば、それを使ってDiscordに音声認識結果を投稿します
