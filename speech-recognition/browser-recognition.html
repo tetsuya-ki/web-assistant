@@ -59,11 +59,35 @@
               id="webhook_url"
               class="text"
               type="password"
-              placeholder="Webhook URLを入力し有効にするとDiscordに投稿できるぞ！"
+              placeholder="Webhook URLを入力し有効にするとDiscordに投稿されます"
               onkeyup="this.setAttribute('value', this.value);"
               value=""
             />
             <label class="label">Webhook URL</label>
+            <label class="error"></label>
+          </span>
+          <span class="textBox">
+            <input
+              id="bot_name"
+              class="text"
+              type="textbox"
+              placeholder="Discordに投稿する際の名前"
+              onkeyup="this.setAttribute('value', this.value);"
+              value="音声認識くん"
+            />
+            <label class="label">bot_name</label>
+            <label class="error"></label>
+          </span>
+          <span class="textBox">
+            <input
+              id="bot_avatar_url"
+              class="text"
+              type="textbox"
+              placeholder="Discordに投稿する際のアイコン画像のURL"
+              onkeyup="this.setAttribute('value', this.value);"
+              value="https://i.imgur.com/Wyw2lgj.png"
+            />
+            <label class="label">bot_avatar_url</label>
             <label class="error"></label>
           </span>
         </div>
@@ -88,12 +112,7 @@
       <p>&copy;2022 tetsuya-kiのライセンスはMIT LICENSE</p>
     </footer>
     <script>
-      let POST_FLAG = true;
-      // *************** この部分は人によって異なります！(かいし) ***************
-      POST_FLAG = false; // 投稿したくない場合(デバッグ等)はコメントアウトを解除
-      const BOT_NAME = "音声認識くん"; // 投稿するBotの名前を指定
-      const BOT_AVATAR_URL = "https://i.imgur.com/Wyw2lgj.png"; // あなたが使いたい画像を指定
-      // *************** この部分は人によって異なります！(終わり) ***************
+      let POST_FLAG = false; // 投稿したくない場合(デバッグ等)はコメントアウトを解除
       window.addEventListener("DOMContentLoaded", () => {
         const button = document.getElementById("button");
         const discord_post_button = document.getElementById("post_button");
@@ -105,6 +124,8 @@
         const switch1 = document.getElementById("switch1");
         const switch2 = document.getElementById("switch2");
         const webhook_url = document.getElementById("webhook_url");
+        const bot_name = document.getElementById("bot_name");
+        const bot_avatar_url = document.getElementById("bot_avatar_url");
         status.style.visibility = "hidden";
         let listening = false;
         const SpeechRecognition =
@@ -172,7 +193,10 @@
                 recognition.stop();
 
                 // 名前の調整
-                let user_name = BOT_NAME;
+                let user_name = "音声認識くん";
+                if (bot_name.value !== "") {
+                  user_name = bot_name.value;
+                }
                 let pname = "";
                 if (name.value !== "") {
                   pname = "(" + name.value + ")";
@@ -192,13 +216,13 @@
 
                   // Webhookを使ってDiscordへポスト
                   let requestPayload = {
-                    content: name_and_text, // 音声認識された文字列
+                    content: text, // 音声認識された文字列
                     username: user_name, // 表示するユーザ名
                     parse: "full", // URL展開するかどうかみたいなヤツだった気がする
                   };
                   // アバターの画像が定義されていれば使う
-                  if (typeof BOT_AVATAR_URL !== "undefined") {
-                    requestPayload.avatar_url = BOT_AVATAR_URL;
+                  if (bot_avatar_url.value !== "") {
+                    requestPayload.avatar_url = bot_avatar_url.value;
                   }
                   // POST_FLAGがOFFかつWebhookURLがない場合は何もしない
                   if (POST_FLAG && webhook_url.value === "") {
@@ -265,10 +289,10 @@
         });
         return response; // レスポンスを返却
       }
-      function datelog(text="") {
+      function datelog(text = "") {
         const now = new Date();
         const now_datetime = now.toLocaleString();
-        console.log(now_datetime + ": "+ text);
+        console.log(now_datetime + ": " + text);
       }
     </script>
   </body>
