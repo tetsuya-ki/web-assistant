@@ -204,6 +204,10 @@
                 }
 
                 for (const text of text_list) {
+                  // しょぼい文字数だったら何もしない
+                  if (!text || text.length <= 3) {
+                    continue;
+                  }
                   let name_and_text = text;
                   name_and_text = pname + " " + text;
                   const now = new Date();
