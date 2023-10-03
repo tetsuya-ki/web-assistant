@@ -29,8 +29,15 @@
         Chromeではおそらく使えますので、そちらでお試しください。
       </p>
       <p id="recog-status">(音声認識中)</p>
-      <button id="button">Start listening</button>
-      <button id="post_button">現在、Discordに投稿されます</button>
+      <div id="toggle-button">
+        <button id="button" class="toggleButton">Start listening</button>
+        <button id="post_button"  class="toggleButton">現在、Discordに投稿されます</button>
+      </div>
+      <div id="data-button">
+        <button id="modosu_button" onclick="modosuButtonClick();"/>データ復元</button>
+        <button id="kesu_button"  onclick="kesuButtonClick();">データ削除</button>
+      </div>
+      <br>
       <div id="other">
         <span>
           <div class="setting-area">
@@ -100,8 +107,6 @@
             <label class="error"></label>
           </span>
         </div>
-        <!-- <span>名前: <input type="text" id="name" /></span>
-        <span>URL: <input type="password" id="webhook_url" size="29" maxlength="120"></span> -->
       </div>
     </main>
     <footer>
@@ -121,6 +126,7 @@
       <p>&copy;2022 tetsuya-kiのライセンスはMIT LICENSE</p>
     </footer>
     <script>
+      var sessinStrageArray = [];
       let POST_FLAG = false; // 投稿したくない場合(デバッグ等)はコメントアウトを解除
       window.addEventListener("DOMContentLoaded", () => {
         const button = document.getElementById("button");
@@ -246,6 +252,14 @@
                     });
                   }
                 }
+
+                // セッションストレージに保存
+                var obj = {
+                  'result': result.innerHTML
+                };
+                sessinStrageArray.push(obj);
+                var setjson = JSON.stringify(obj);
+                localStorage.setItem('data', setjson);
               }
             }
           };
@@ -306,6 +320,18 @@
         const now = new Date();
         const now_datetime = now.toLocaleString();
         console.log(now_datetime + ": " + text);
+      }
+      function modosuButtonClick() {
+        var getjson = localStorage.getItem('data');
+        var obj = JSON.parse(getjson);
+        console.log(obj);
+        // 復元
+        result.innerHTML = obj['result'];
+      }
+      function kesuButtonClick() {
+      // キーを指定して削除&初期化
+      localStorage.removeItem('data');
+      localStorage.clear()
       }
     </script>
   </body>
