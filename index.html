@@ -157,6 +157,9 @@
             status.style.visibility = "hidden"; // 音声認識中である旨を消す
           };
 
+          // 最初に戻す
+          modosuButtonClick();
+
           const stop = () => {
             main.classList.remove("speaking");
             recognition.stop();
