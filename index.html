@@ -328,7 +328,7 @@
         var getjson = localStorage.getItem('data');
         var obj = JSON.parse(getjson);
         console.log(obj);
-        if (obj.hasOwnProperty('result')) {
+        if (obj != null && obj.hasOwnProperty('result')) {
           // 復元
           result.innerHTML = obj['result'];
         } else {
