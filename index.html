@@ -328,8 +328,12 @@
         var getjson = localStorage.getItem('data');
         var obj = JSON.parse(getjson);
         console.log(obj);
-        // 復元
-        result.innerHTML = obj['result'];
+        if (obj.hasOwnProperty('result') {
+          // 復元
+          result.innerHTML = obj['result'];
+        } else {
+          console.log('Data Not Found.');
+        }
       }
       function kesuButtonClick() {
       // キーを指定して削除&初期化
